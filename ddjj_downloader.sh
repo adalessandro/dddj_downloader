@@ -104,7 +104,7 @@ download() {
 
 merge() {
 	idempresa=$1
-	long_name_empresa=$2
+	long_name_empresa=$(echo $2 | tr "," " ")
 	idanio=$3
 	idmes=$4
 
