@@ -119,62 +119,79 @@ merge() {
 	tail -n +2 "$file.csv" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
 }
 
+progress() {
+	zenity --progress \
+	  --auto-close \
+	  title="Generando archivo" \
+	  text="Aguarde mientras su archivo está siendo generado..." \
+	  percentage=0
+}
+
 echo "${HEADER}" > "$OUTPUT_FILE"
 
-for ((i = 0; i < ${#ID_EMPRESA[@]}; i++)) do
+work() {
+	for ((i = 0; i < ${#ID_EMPRESA[@]}; i++)) do
 
-	idempresa="${ID_EMPRESA[$i]}"
-	if [ -z "${idempresa}" ]; then
-		continue
-	fi
-	long_name_empresa="${LONG_NAMES[$i]}"
+		percent=$(awk "BEGIN { pc=100*${i}/${#ID_EMPRESA[@]}; i=int(pc); print (pc-i<0.5)?i:i+1 }")
+		echo "$percent"
 
-	# Download
-	for idanio in `seq $year_from $year_to`; do
-		if [ "$idanio" -eq "$year_from" ]; then
-			if [ "$idanio" -eq "$year_to" ]; then
-				for idmes in `seq $month_from $month_to`; do
+		idempresa="${ID_EMPRESA[$i]}"
+		if [ -z "${idempresa}" ]; then
+			continue
+		fi
+		long_name_empresa="${LONG_NAMES[$i]}"
+
+		# Download
+		for idanio in `seq $year_from $year_to`; do
+			if [ "$idanio" -eq "$year_from" ]; then
+				if [ "$idanio" -eq "$year_to" ]; then
+					for idmes in `seq $month_from $month_to`; do
+						download "$idempresa" "$idanio" "$idmes"
+					done
+				else
+					for idmes in `seq $month_from 12`; do
+						download "$idempresa" "$idanio" "$idmes"
+					done
+				fi
+			elif [ "$idanio" -eq "$year_to" ]; then
+				for idmes in `seq 1 $month_to`; do
 					download "$idempresa" "$idanio" "$idmes"
 				done
 			else
-				for idmes in `seq $month_from 12`; do
+				for idmes in `seq 1 12`; do
 					download "$idempresa" "$idanio" "$idmes"
 				done
 			fi
-		elif [ "$idanio" -eq "$year_to" ]; then
-			for idmes in `seq 1 $month_to`; do
-				download "$idempresa" "$idanio" "$idmes"
-			done
-		else
-			for idmes in `seq 1 12`; do
-				download "$idempresa" "$idanio" "$idmes"
-			done
-		fi
-	done
-	
-	# Merge
-	for idanio in `seq $year_from $year_to`; do
-		if [ "$idanio" -eq "$year_from" ]; then
-			if [ "$idanio" -eq "$year_to" ]; then
-				for idmes in `seq $month_from $month_to`; do
+		done
+
+		# Merge
+		for idanio in `seq $year_from $year_to`; do
+			if [ "$idanio" -eq "$year_from" ]; then
+				if [ "$idanio" -eq "$year_to" ]; then
+					for idmes in `seq $month_from $month_to`; do
+						merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
+					done
+				else
+					for idmes in `seq $month_from 12`; do
+						merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
+					done
+				fi
+			elif [ "$idanio" -eq "$year_to" ]; then
+				for idmes in `seq 1 $month_to`; do
 					merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
 				done
 			else
-				for idmes in `seq $month_from 12`; do
+				for idmes in `seq 1 12`; do
 					merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
 				done
 			fi
-		elif [ "$idanio" -eq "$year_to" ]; then
-			for idmes in `seq 1 $month_to`; do
-				merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
-			done
-		else
-			for idmes in `seq 1 12`; do
-				merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
-			done
-		fi
-	done
+		done
 
-done #\idempresa
+	done #\idempresa
+}
+
+work | progress
 
 cp $OUTPUT_FILE ../output_${DATE}.csv
+
+zenity --info --text="Exito! Su archivo se ha generado en output_${DATE}.csv"
