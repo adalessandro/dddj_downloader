@@ -5,7 +5,7 @@
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
 OUTPUT_DIR=output_${DATE}/
 OUTPUT_FILE=output.csv
-HEADER='Empresa,"Nombre corto",Año,Mes,Cuenca,Provincia,Área,Yacimiento,"ID Pozo",Sigla,Form.Prod.,Cód.Propio,Nom.Propio,Prod.Men.Pet.(m3),Prod.Men.Gas(Mm3),Prod.Men.Agua(m3),Prod.Acum.Pet.(m3),Prod.Acum.Gas(Mm3),Prod.Acum.Agua(m3),Iny.Agua(m3),Iny.Gas(Mm3),Iny.CO2(Mm3),Iny.Otros(m3),RGP,"% de Agua",TEF,"Vida Útil",Sist.Extrac.,Est.Pozo,"Tipo Pozo",Clasificación,"Sub clasificación","Tipo de Recurso","Sub tipo de Recurso",Observaciones,Latitud,Longitud,Cota,Profundidad'
+HEADER='Empresa;"Nombre corto";Año;Mes;Cuenca;Provincia;Área;Yacimiento;"ID Pozo";Sigla;Form.Prod.;Cód.Propio;Nom.Propio;Prod.Men.Pet.(m3);Prod.Men.Gas(Mm3);Prod.Men.Agua(m3);Prod.Acum.Pet.(m3);Prod.Acum.Gas(Mm3);Prod.Acum.Agua(m3);Iny.Agua(m3);Iny.Gas(Mm3);Iny.CO2(Mm3);Iny.Otros(m3);RGP;"% de Agua";TEF;"Vida Útil";Sist.Extrac.;Est.Pozo;"Tipo Pozo";Clasificación;"Sub clasificación";"Tipo de Recurso";"Sub tipo de Recurso";Observaciones;Latitud;Longitud;Cota;Profundidad'
 
 rm -rf $OUTPUT_DIR
 mkdir $OUTPUT_DIR
@@ -130,7 +130,7 @@ download() {
 	url="http://wvw.se.gob.ar/datosupstream/consulta_avanzada/ddjj.xls.php?idempresa=$idempresa&idmes=$idmes&idanio=$idanio"
 	file="$idempresa-$idanio-$idmes"
 	echo "# Descargando $file"
-	(wget "$url" --output-document="$file.xls" && ssconvert "$file.xls" "$file.csv")
+	(wget "$url" --output-document="$file.xls" && LANG=C ssconvert -O 'separator=;' "$file.xls" "$file.txt")
 }
 
 merge() {
@@ -140,23 +140,23 @@ merge() {
 	idmes=$4
 
 	file="$idempresa-$idanio-$idmes"
-	prefix="$long_name_empresa,$idempresa,$idanio,$idmes,"
+	prefix="$long_name_empresa;$idempresa;$idanio;$idmes;"
 
 	#if [ -z ${init_flag} ]; then
-		#head -n 1 "$file.csv" | sed -e "s/^/Empresa,Año,Mes,/" >> "$output"
+		#head -n 1 "$file.txt" | sed -e "s/^/Empresa,Año,Mes,/" >> "$output"
 		#init_flag="ON"
 	#fi
 
 	echo "# Procesando $file"
 
 	if [ "$filter" == "*Todos* (Sin filtro)" ]; then
-		tail -n +2 "$file.csv" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
+		tail -n +2 "$file.txt" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
 	else
-		tail -n +2 "$file.csv" | grep -i "$filter" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
+		tail -n +2 "$file.txt" | grep -i "$filter" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
 	fi
 
 	if [ "$delete_files" == "0" ]; then
-		rm -f "$file.csv" "$file.xls"
+		rm -f "$file.txt" "$file.xls"
 	fi
 }
 
