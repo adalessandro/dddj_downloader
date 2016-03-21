@@ -113,6 +113,14 @@ fi
 
 filter=${OTHER_PARAMS[0]}
 
+read_delete_files() {
+	zenity --question \
+		--text="Borrar archivos descargados una vez procesados?"
+}
+
+read_delete_files
+delete_files=$?
+
 # Lets do some real work!
 download() {
 	idempresa=$1
@@ -147,7 +155,9 @@ merge() {
 		tail -n +2 "$file.csv" | grep -i "$filter" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
 	fi
 
-	rm -f "$file.csv" "$file.xls"
+	if [ "$delete_files" == "0" ]; then
+		rm -f "$file.csv" "$file.xls"
+	fi
 }
 
 progress() {
