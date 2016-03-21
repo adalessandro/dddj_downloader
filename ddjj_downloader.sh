@@ -91,6 +91,28 @@ if [ "$year_from" -eq "$year_to" ]; then
 	if [ "$month_from" -gt "$month_to" ]; then error "Rango incorrecto"; fi
 fi
 
+# Other parameters
+read_other_params() {
+	zenity --list --radiolist \
+		--width=360 --height=360 \
+		--title="Otros parámetros" \
+		--text="Seleccione el filtro por tipo de recurso" \
+		--column="Tipo de recurso" \
+		--column="Tipo de recurso" \
+		FALSE "*Todos* (Sin filtro)" \
+		TRUE "No convencional" \
+		FALSE "Convencional" \
+		FALSE "Sin reservorio"
+}
+
+if params=`read_other_params`; then
+	IFS='|' read -ra OTHER_PARAMS <<< "$params"
+else
+	exit
+fi
+
+filter=${OTHER_PARAMS[0]}
+
 # Lets do some real work!
 download() {
 	idempresa=$1
@@ -99,6 +121,7 @@ download() {
 
 	url="http://wvw.se.gob.ar/datosupstream/consulta_avanzada/ddjj.xls.php?idempresa=$idempresa&idmes=$idmes&idanio=$idanio"
 	file="$idempresa-$idanio-$idmes"
+	echo "# Descargando $file"
 	(wget "$url" --output-document="$file.xls" && ssconvert "$file.xls" "$file.csv")
 }
 
@@ -116,15 +139,22 @@ merge() {
 		#init_flag="ON"
 	#fi
 
-	tail -n +2 "$file.csv" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
+	echo "# Procesando $file"
+
+	if [ "$filter" == "*Todos* (Sin filtro)" ]; then
+		tail -n +2 "$file.csv" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
+	else
+		tail -n +2 "$file.csv" | grep -i "$filter" | sed -e "s/^/$prefix/" >> "$OUTPUT_FILE"
+	fi
+
+	rm -f "$file.csv" "$file.xls"
 }
 
 progress() {
-	zenity --progress \
-	  --auto-close \
-	  title="Generando archivo" \
-	  text="Aguarde mientras su archivo está siendo generado..." \
-	  percentage=0
+	zenity --progress --width=360 \
+	  --pulsate \
+	  --title="Generando archivo..." \
+	  --text="Procesando..."
 }
 
 echo "${HEADER}" > "$OUTPUT_FILE"
@@ -132,8 +162,8 @@ echo "${HEADER}" > "$OUTPUT_FILE"
 work() {
 	for ((i = 0; i < ${#ID_EMPRESA[@]}; i++)) do
 
-		percent=$(awk "BEGIN { pc=100*${i}/${#ID_EMPRESA[@]}; i=int(pc); print (pc-i<0.5)?i:i+1 }")
-		echo "$percent"
+		#percent=$(awk "BEGIN { pc=100*${i}/${#ID_EMPRESA[@]}; i=int(pc); print (pc-i<0.5)?i:i+1 }")
+		#echo "$percent"
 
 		idempresa="${ID_EMPRESA[$i]}"
 		if [ -z "${idempresa}" ]; then
@@ -188,10 +218,14 @@ work() {
 		done
 
 	done #\idempresa
+
+	echo "# Exito! Su archivo se ha generado en output_${DATE}.csv"
 }
 
-work | progress
-
-cp $OUTPUT_FILE ../output_${DATE}.csv
-
-zenity --info --text="Exito! Su archivo se ha generado en output_${DATE}.csv"
+work |
+	if progress; then
+		cp $OUTPUT_FILE ../output_${DATE}.csv
+	else
+		kill -9 $$
+		exit
+	fi
