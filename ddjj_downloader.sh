@@ -130,7 +130,10 @@ download() {
 	url="http://wvw.se.gob.ar/datosupstream/consulta_avanzada/ddjj.xls.php?idempresa=$idempresa&idmes=$idmes&idanio=$idanio"
 	file="$idempresa-$idanio-$idmes"
 	echo "# Descargando $file"
-	(wget "$url" --output-document="$file.xls" && LANG=C ssconvert -O 'separator=;' "$file.xls" "$file.txt")
+	while [ ! -f "$file.xls" ]; do
+		(wget "$url" --output-document="$file.xls_" --timeout=10 && mv "$file.xls_" "$file.xls") || sleep 3
+	done
+	LANG=C ssconvert -O 'separator=;' "$file.xls" "$file.txt"
 }
 
 merge() {
