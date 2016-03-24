@@ -234,7 +234,7 @@ work() {
 
 work |
 	if progress; then
-		cp $OUTPUT_FILE ../output_${DATE}.csv
+		cat $OUTPUT_FILE | iconv -f utf-8 -t latin1 > ../output_${DATE}.csv
 	else
 		kill -9 $$
 		exit
