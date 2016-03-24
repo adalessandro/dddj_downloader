@@ -239,6 +239,6 @@ work |
 	if progress; then
 		cat $OUTPUT_FILE | iconv -f utf-8 -t latin1 > ../output_${DATE}.csv
 	else
-		kill -9 $$
+		pkill -P $$
 		exit
 	fi
