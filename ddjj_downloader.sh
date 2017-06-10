@@ -49,7 +49,11 @@ get_short_name() {
 
 idempresa_list=""
 for ((i = 0; i < ${#LONG_NAMES[@]}; i++)) do
-	new_id=$(get_short_name "${LONG_NAMES[$i]}")
+	long_name="${LONG_NAMES[$i]}"
+	# There a carriege return sometimes. Not sure why, but
+	# let's just get rid of it.
+	long_name=$(echo "$long_name" | sed 's/\r//')
+	new_id=$(get_short_name "$long_name")
     idempresa_list="$idempresa_list|$new_id"
 done
 
@@ -174,7 +178,6 @@ echo "${HEADER}" > "$OUTPUT_FILE"
 
 work() {
 	for ((i = 0; i < ${#ID_EMPRESA[@]}; i++)) do
-
 		#percent=$(awk "BEGIN { pc=100*${i}/${#ID_EMPRESA[@]}; i=int(pc); print (pc-i<0.5)?i:i+1 }")
 		#echo "$percent"
 
