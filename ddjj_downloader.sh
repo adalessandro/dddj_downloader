@@ -127,6 +127,30 @@ read_delete_files
 delete_files=$?
 
 # Lets do some real work!
+check () {
+	idempresa=$1
+	idanio=$2
+	idmes=$3
+
+	file="$idempresa-$idanio-$idmes"
+
+	if [ -f "$file.xls" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+convert() {
+	idempresa=$1
+	idanio=$2
+	idmes=$3
+
+	file="$idempresa-$idanio-$idmes"
+
+	LANG=C ssconvert -O 'separator=;' "$file.xls" "$file.txt"
+}
+
 download() {
 	idempresa=$1
 	idanio=$2
@@ -134,11 +158,10 @@ download() {
 
 	url="http://wvw.se.gob.ar/datosupstream/consulta_avanzada/ddjj.xls.php?idempresa=$idempresa&idmes=$idmes&idanio=$idanio"
 	file="$idempresa-$idanio-$idmes"
-	echo "# Descargando $file"
+
 	while [ ! -f "$file.xls" ]; do
 		(wget "$url" --output-document="$file.xls_" --timeout=$WGET_TIMEOUT && mv "$file.xls_" "$file.xls") || sleep 3
 	done
-	LANG=C ssconvert -O 'separator=;' "$file.xls" "$file.txt"
 }
 
 merge() {
@@ -196,22 +219,66 @@ work() {
 			if [ "$idanio" -eq "$year_from" ]; then
 				if [ "$idanio" -eq "$year_to" ]; then
 					for idmes in `seq $month_from $month_to`; do
-						download "$idempresa" "$idanio" "$idmes"
+						download "$idempresa" "$idanio" "$idmes" &
 					done
 				else
 					for idmes in `seq $month_from 12`; do
-						download "$idempresa" "$idanio" "$idmes"
+						download "$idempresa" "$idanio" "$idmes" &
 					done
 				fi
 			elif [ "$idanio" -eq "$year_to" ]; then
 				for idmes in `seq 1 $month_to`; do
-					download "$idempresa" "$idanio" "$idmes"
+					download "$idempresa" "$idanio" "$idmes" &
 				done
 			else
 				for idmes in `seq 1 12`; do
-					download "$idempresa" "$idanio" "$idmes"
+					download "$idempresa" "$idanio" "$idmes" &
 				done
 			fi
+		done
+
+		# Check
+		while : ; do
+			total_downloads=0
+			finished_downloads=0
+			for idanio in `seq $year_from $year_to`; do
+				if [ "$idanio" -eq "$year_from" ]; then
+					if [ "$idanio" -eq "$year_to" ]; then
+						for idmes in `seq $month_from $month_to`; do
+							if check "$idempresa" "$idanio" "$idmes"; then
+								finished_downloads=$(($finished_downloads + 1))
+							fi
+							total_downloads=$(($total_downloads + 1))
+						done
+					else
+						for idmes in `seq $month_from 12`; do
+							if check "$idempresa" "$idanio" "$idmes"; then
+								finished_downloads=$(($finished_downloads + 1))
+							fi
+							total_downloads=$(($total_downloads + 1))
+						done
+					fi
+				elif [ "$idanio" -eq "$year_to" ]; then
+					for idmes in `seq 1 $month_to`; do
+						if check "$idempresa" "$idanio" "$idmes"; then
+							finished_downloads=$(($finished_downloads + 1))
+						fi
+						total_downloads=$(($total_downloads + 1))
+					done
+				else
+					for idmes in `seq 1 12`; do
+						if check "$idempresa" "$idanio" "$idmes"; then
+							finished_downloads=$(($finished_downloads + 1))
+						fi
+						total_downloads=$(($total_downloads + 1))
+					done
+				fi
+			done
+
+			echo "# Descargando archivo... finalizados $finished_downloads de $total_downloads"
+			[ $finished_downloads -eq $total_downloads ] && break
+
+			sleep 10
 		done
 
 		# Merge
@@ -219,19 +286,23 @@ work() {
 			if [ "$idanio" -eq "$year_from" ]; then
 				if [ "$idanio" -eq "$year_to" ]; then
 					for idmes in `seq $month_from $month_to`; do
+						convert "$idempresa" "$idanio" "$idmes"
 						merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
 					done
 				else
 					for idmes in `seq $month_from 12`; do
+						convert "$idempresa" "$idanio" "$idmes"
 						merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
 					done
 				fi
 			elif [ "$idanio" -eq "$year_to" ]; then
 				for idmes in `seq 1 $month_to`; do
+					convert "$idempresa" "$idanio" "$idmes"
 					merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
 				done
 			else
 				for idmes in `seq 1 12`; do
+					convert "$idempresa" "$idanio" "$idmes"
 					merge "$idempresa" "$long_name_empresa" "$idanio" "$idmes"
 				done
 			fi
