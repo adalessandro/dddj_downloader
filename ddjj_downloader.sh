@@ -202,9 +202,6 @@ echo "${HEADER}" > "$OUTPUT_FILE"
 
 work() {
 	for ((i = 0; i < ${#ID_EMPRESA[@]}; i++)) do
-		#percent=$(awk "BEGIN { pc=100*${i}/${#ID_EMPRESA[@]}; i=int(pc); print (pc-i<0.5)?i:i+1 }")
-		#echo "$percent"
-
 		idempresa="${ID_EMPRESA[$i]}"
 		if [ -z "${idempresa}" ]; then
 			continue
@@ -236,11 +233,23 @@ work() {
 				done
 			fi
 		done
+	done
 
-		# Check
-		while : ; do
-			total_downloads=0
-			finished_downloads=0
+	# Check
+	while : ; do
+		total_downloads=0
+		finished_downloads=0
+
+		for ((i = 0; i < ${#ID_EMPRESA[@]}; i++)) do
+			idempresa="${ID_EMPRESA[$i]}"
+			if [ -z "${idempresa}" ]; then
+				continue
+			fi
+			long_name_empresa="${LONG_NAMES[$i]}"
+			# There a carriege return sometimes. Not sure why, but
+			# let's just get rid of it.
+			long_name_empresa=$(echo "$long_name_empresa" | sed 's/\r//')
+
 			for idanio in `seq $year_from $year_to`; do
 				if [ "$idanio" -eq "$year_from" ]; then
 					if [ "$idanio" -eq "$year_to" ]; then
@@ -274,14 +283,25 @@ work() {
 					done
 				fi
 			done
-
-			echo "# Descargando archivo... finalizados $finished_downloads de $total_downloads"
-			[ $finished_downloads -eq $total_downloads ] && break
-
-			sleep 10
 		done
 
-		# Merge
+		echo "# Descargando archivos... finalizados $finished_downloads de $total_downloads"
+		[ $finished_downloads -eq $total_downloads ] && break
+
+		sleep 10
+	done
+
+	# Merge
+	for ((i = 0; i < ${#ID_EMPRESA[@]}; i++)) do
+		idempresa="${ID_EMPRESA[$i]}"
+		if [ -z "${idempresa}" ]; then
+			continue
+		fi
+		long_name_empresa="${LONG_NAMES[$i]}"
+		# There a carriege return sometimes. Not sure why, but
+		# let's just get rid of it.
+		long_name_empresa=$(echo "$long_name_empresa" | sed 's/\r//')
+
 		for idanio in `seq $year_from $year_to`; do
 			if [ "$idanio" -eq "$year_from" ]; then
 				if [ "$idanio" -eq "$year_to" ]; then
