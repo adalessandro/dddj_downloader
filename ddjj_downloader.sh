@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # dependencies : wget gnumeric zenity
+WGET_TIMEOUT=$((60 * 10))
 
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
 OUTPUT_DIR=output_${DATE}/
@@ -135,7 +136,7 @@ download() {
 	file="$idempresa-$idanio-$idmes"
 	echo "# Descargando $file"
 	while [ ! -f "$file.xls" ]; do
-		(wget "$url" --output-document="$file.xls_" --timeout=10 && mv "$file.xls_" "$file.xls") || sleep 3
+		(wget "$url" --output-document="$file.xls_" --timeout=$WGET_TIMEOUT && mv "$file.xls_" "$file.xls") || sleep 3
 	done
 	LANG=C ssconvert -O 'separator=;' "$file.xls" "$file.txt"
 }
