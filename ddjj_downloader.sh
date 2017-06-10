@@ -187,6 +187,9 @@ work() {
 			continue
 		fi
 		long_name_empresa="${LONG_NAMES[$i]}"
+		# There a carriege return sometimes. Not sure why, but
+		# let's just get rid of it.
+		long_name_empresa=$(echo "$long_name_empresa" | sed 's/\r//')
 
 		# Download
 		for idanio in `seq $year_from $year_to`; do
